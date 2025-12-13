@@ -7,6 +7,22 @@ const ChartsComponent = {
     // Chart instances
     charts: {},
 
+    // State
+    volumeMode: '3d',  // '3d' or '2d'
+
+    /**
+     * Sets the volume surface display mode (3D or 2D)
+     */
+    setVolumeMode(mode) {
+        this.volumeMode = mode;
+
+        document.querySelectorAll('.surface-mode-toggle .toggle-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.mode === mode);
+        });
+
+        this.renderVolumeSurface();
+    },
+
     /**
      * Returns HTML structure for charts tab
      */
@@ -33,7 +49,14 @@ const ChartsComponent = {
             </div>
 
             <div class="chart-container chart-full">
-                <div id="heatmapChart" class="chart-wrapper" style="height: 300px;"></div>
+                <div class="chart-header">
+                    <span class="chart-title">Volume Surface</span>
+                    <div class="surface-mode-toggle panel-toggles">
+                        <button class="toggle-btn active" data-mode="3d" onclick="ChartsComponent.setVolumeMode('3d')" title="3D Surface View">3D</button>
+                        <button class="toggle-btn" data-mode="2d" onclick="ChartsComponent.setVolumeMode('2d')" title="2D Heatmap View">2D</button>
+                    </div>
+                </div>
+                <div id="volumeSurfaceChart" class="chart-wrapper" style="height: 380px;"></div>
             </div>
             <div class="chart-grid">
                 <div class="chart-container">
@@ -43,13 +66,8 @@ const ChartsComponent = {
                     <div id="oiByStrikeChart" class="chart-wrapper" style="height: 300px;"></div>
                 </div>
             </div>
-            <div class="chart-grid">
-                <div class="chart-container">
-                    <div id="changeHeatmapChart" class="chart-wrapper" style="height: 300px;"></div>
-                </div>
-                <div class="chart-container">
-                    <div id="volumeTimeChart" class="chart-wrapper" style="height: 300px;"></div>
-                </div>
+            <div class="chart-container chart-full">
+                <div id="volumeTimeChart" class="chart-wrapper" style="height: 280px;"></div>
             </div>
         `;
     },
@@ -79,10 +97,9 @@ const ChartsComponent = {
             return;
         }
 
+        this.renderVolumeSurface();
         this.renderVolumeByStrike();
         this.renderOIByStrike();
-        this.renderHeatmap();
-        this.renderChangeHeatmap();
         this.renderVolumeTimeSeries();
     },
 
@@ -231,10 +248,10 @@ const ChartsComponent = {
     },
 
     /**
-     * Volume Surface Heatmap
+     * Volume Surface - 3D or 2D mode
      */
-    renderHeatmap() {
-        const chart = this.getChart('heatmapChart');
+    renderVolumeSurface() {
+        const chart = this.getChart('volumeSurfaceChart');
         if (!chart) return;
 
         const enrichedData = (typeof data !== 'undefined' && data.enriched) ? data.enriched.data || [] : [];
@@ -246,33 +263,248 @@ const ChartsComponent = {
 
         const expirations = [...new Set(allData.map(r => r.expiration))].sort();
         const strikes = [...new Set(allData.map(r => r.strike))].sort((a, b) => a - b);
+        const spotPrice = data?.enriched?.meta?.spot_price;
 
+        // Build volume map and DTE map
+        const volMap = {};
+        const dteMap = {};
+        let maxLogVol = 0;
+
+        for (const row of allData) {
+            if (!volMap[row.expiration]) volMap[row.expiration] = {};
+            const vol = row.volume_today || row.volume_cumulative || 0;
+            const logVol = vol > 0 ? Math.log10(vol + 1) : 0;
+            volMap[row.expiration][row.strike] = { vol, logVol, notional: row.notional_today || 0 };
+            if (logVol > maxLogVol) maxLogVol = logVol;
+            if (row.dte !== undefined) dteMap[row.expiration] = row.dte;
+        }
+
+        // Fallback DTE calculation if not available
+        for (const exp of expirations) {
+            if (dteMap[exp] === undefined) {
+                const expDate = new Date(exp);
+                const today = new Date();
+                dteMap[exp] = Math.max(0, Math.ceil((expDate - today) / (1000 * 60 * 60 * 24)));
+            }
+        }
+
+        if (this.volumeMode === '3d') {
+            this.renderVolumeSurface3D(chart, strikes, expirations, volMap, dteMap, maxLogVol, spotPrice);
+        } else {
+            this.renderVolumeSurface2D(chart, strikes, expirations, volMap, dteMap, maxLogVol);
+        }
+    },
+
+    /**
+     * 3D Volume Surface
+     */
+    renderVolumeSurface3D(chart, strikes, expirations, volMap, dteMap, maxLogVol, spotPrice) {
+        // Build surface data: [[strike, dte, logVolume], ...]
+        const surfaceData = [];
+
+        for (const exp of expirations) {
+            const dte = dteMap[exp];
+            for (const strike of strikes) {
+                const volData = volMap[exp]?.[strike];
+                if (volData) {
+                    surfaceData.push([strike, dte, volData.logVol]);
+                }
+            }
+        }
+
+        // Find ATM strike index for reference
+        const atmStrike = spotPrice ? strikes.reduce((prev, curr) =>
+            Math.abs(curr - spotPrice) < Math.abs(prev - spotPrice) ? curr : prev
+        ) : null;
+
+        const option = {
+            backgroundColor: 'transparent',
+            tooltip: {
+                ...Config.echartsBase.tooltip,
+                formatter: (params) => {
+                    const [strike, dte, logVol] = params.data;
+                    const exp = expirations.find(e => dteMap[e] === dte) || '';
+                    const volData = volMap[exp]?.[strike];
+                    const vol = volData ? volData.vol : 0;
+                    const notional = volData ? volData.notional : 0;
+                    const atmLabel = (spotPrice && Math.abs(strike - spotPrice) < 5) ? ' (ATM)' : '';
+                    return `<b>Strike: ${strike}${atmLabel}</b><br/>` +
+                           `Exp: ${Utils.formatShortDate(exp)} (${dte}d)<br/>` +
+                           `Volume: ${vol.toLocaleString()}<br/>` +
+                           `Notional: $${notional.toLocaleString()}`;
+                }
+            },
+            visualMap: {
+                show: true,
+                dimension: 2,
+                min: 0,
+                max: maxLogVol || 5,
+                inRange: {
+                    color: Config.colorScales.volume.map(c => c[1])
+                },
+                right: 10,
+                top: 'center',
+                itemHeight: 140,
+                textStyle: {
+                    color: Config.theme.textMuted,
+                    fontSize: 10
+                },
+                formatter: (val) => {
+                    const actualVol = Math.pow(10, val);
+                    if (actualVol >= 1000) return (actualVol / 1000).toFixed(0) + 'K';
+                    return actualVol.toFixed(0);
+                }
+            },
+            xAxis3D: {
+                type: 'value',
+                name: 'Strike',
+                min: Math.min(...strikes),
+                max: Math.max(...strikes),
+                axisLabel: {
+                    color: Config.theme.textMuted,
+                    fontSize: 10,
+                    formatter: (val) => val.toLocaleString()
+                },
+                axisLine: { lineStyle: { color: Config.theme.border } },
+                splitLine: { lineStyle: { color: Config.theme.bgTertiary, opacity: 0.3 } },
+                nameTextStyle: { color: Config.theme.textSecondary, fontSize: 11 }
+            },
+            yAxis3D: {
+                type: 'value',
+                name: 'DTE',
+                min: 0,
+                axisLabel: {
+                    color: Config.theme.textMuted,
+                    fontSize: 10
+                },
+                axisLine: { lineStyle: { color: Config.theme.border } },
+                splitLine: { lineStyle: { color: Config.theme.bgTertiary, opacity: 0.3 } },
+                nameTextStyle: { color: Config.theme.textSecondary, fontSize: 11 }
+            },
+            zAxis3D: {
+                type: 'value',
+                name: 'Volume',
+                axisLabel: {
+                    color: Config.theme.textMuted,
+                    fontSize: 10,
+                    formatter: (val) => {
+                        const actualVol = Math.pow(10, val);
+                        if (actualVol >= 1000) return (actualVol / 1000).toFixed(0) + 'K';
+                        return actualVol.toFixed(0);
+                    }
+                },
+                axisLine: { lineStyle: { color: Config.theme.border } },
+                splitLine: { lineStyle: { color: Config.theme.bgTertiary, opacity: 0.3 } },
+                nameTextStyle: { color: Config.theme.textSecondary, fontSize: 11 }
+            },
+            grid3D: {
+                boxWidth: 120,
+                boxHeight: 60,
+                boxDepth: 80,
+                viewControl: {
+                    alpha: 25,
+                    beta: 45,
+                    distance: 220,
+                    autoRotate: false,
+                    animation: true,
+                    damping: 0.8,
+                    rotateSensitivity: 1,
+                    zoomSensitivity: 1,
+                    panSensitivity: 1
+                },
+                light: {
+                    main: {
+                        intensity: 1.2,
+                        shadow: true,
+                        shadowQuality: 'high',
+                        alpha: 35,
+                        beta: 40
+                    },
+                    ambient: {
+                        intensity: 0.4
+                    }
+                },
+                postEffect: {
+                    enable: true,
+                    bloom: {
+                        enable: true,
+                        intensity: 0.1
+                    },
+                    SSAO: {
+                        enable: true,
+                        radius: 4,
+                        intensity: 1.2
+                    }
+                },
+                temporalSuperSampling: {
+                    enable: true
+                }
+            },
+            series: [{
+                type: 'surface',
+                wireframe: {
+                    show: true,
+                    lineStyle: {
+                        color: 'rgba(255, 255, 255, 0.08)',
+                        width: 0.5
+                    }
+                },
+                itemStyle: {
+                    opacity: 0.95
+                },
+                shading: 'realistic',
+                realisticMaterial: {
+                    roughness: 0.55,
+                    metalness: 0.1
+                },
+                data: surfaceData,
+                emphasis: {
+                    itemStyle: {
+                        opacity: 1
+                    }
+                }
+            }]
+        };
+
+        chart.setOption(option, true);
+    },
+
+    /**
+     * 2D Volume Surface (Heatmap fallback)
+     */
+    renderVolumeSurface2D(chart, strikes, expirations, volMap, dteMap, maxLogVol) {
         const heatmapData = [];
-        let maxVol = 0;
 
         for (let i = 0; i < expirations.length; i++) {
             for (let j = 0; j < strikes.length; j++) {
-                const match = allData.find(r => r.expiration === expirations[i] && r.strike === strikes[j]);
-                const vol = match ? (match.volume_today || match.volume_cumulative || 0) : 0;
-                const logVol = vol > 0 ? Math.log10(vol + 1) : 0;
+                const volData = volMap[expirations[i]]?.[strikes[j]];
+                const logVol = volData ? volData.logVol : 0;
                 heatmapData.push([j, i, logVol]);
-                if (logVol > maxVol) maxVol = logVol;
             }
         }
 
         const option = {
             ...Config.echartsBase,
-            title: { text: 'Volume Surface', ...Config.echartsBase.title },
             tooltip: {
                 ...Config.echartsBase.tooltip,
                 formatter: function(params) {
                     const strike = strikes[params.data[0]];
                     const exp = expirations[params.data[1]];
-                    const match = allData.find(r => r.expiration === exp && r.strike === strike);
-                    const vol = match ? (match.volume_today || match.volume_cumulative || 0) : 0;
-                    const notional = match ? (match.notional_today || 0) : 0;
-                    return `<b>${Utils.formatShortDate(exp)}</b><br/>Strike: ${strike}<br/>Vol: ${vol.toLocaleString()}<br/>$${notional.toLocaleString()}`;
+                    const volData = volMap[exp]?.[strike];
+                    const vol = volData ? volData.vol : 0;
+                    const notional = volData ? volData.notional : 0;
+                    const dte = dteMap[exp];
+                    return `<b>${Utils.formatShortDate(exp)} (${dte}d)</b><br/>` +
+                           `Strike: ${strike}<br/>` +
+                           `Volume: ${vol.toLocaleString()}<br/>` +
+                           `Notional: $${notional.toLocaleString()}`;
                 }
+            },
+            grid: {
+                left: 60,
+                right: 80,
+                top: 20,
+                bottom: 40
             },
             xAxis: {
                 type: 'category',
@@ -286,17 +518,17 @@ const ChartsComponent = {
             },
             yAxis: {
                 type: 'category',
-                data: expirations.map(Utils.formatShortDate),
+                data: expirations.map(exp => `${Utils.formatShortDate(exp)} (${dteMap[exp]}d)`),
                 ...Config.yAxis
             },
             visualMap: {
                 min: 0,
-                max: maxVol || 5,
+                max: maxLogVol || 5,
                 calculable: true,
                 orient: 'vertical',
                 right: 10,
                 top: 'center',
-                itemHeight: 120,
+                itemHeight: 140,
                 inRange: {
                     color: Config.colorScales.volume.map(c => c[1])
                 },
@@ -305,7 +537,9 @@ const ChartsComponent = {
                     fontSize: 10
                 },
                 formatter: function(value) {
-                    return Math.pow(10, value).toFixed(0);
+                    const actualVol = Math.pow(10, value);
+                    if (actualVol >= 1000) return (actualVol / 1000).toFixed(0) + 'K';
+                    return actualVol.toFixed(0);
                 }
             },
             series: [{
@@ -324,102 +558,7 @@ const ChartsComponent = {
             }]
         };
 
-        chart.setOption(option);
-    },
-
-    /**
-     * Change Heatmap
-     */
-    renderChangeHeatmap() {
-        const chart = this.getChart('changeHeatmapChart');
-        if (!chart) return;
-
-        const enrichedData = (typeof data !== 'undefined' && data.enriched) ? data.enriched.data || [] : [];
-        if (!enrichedData.length) return;
-
-        const suffix = MoversComponent.comparisonMode === 'hour' ? '_hour' : '_eod';
-
-        const expirations = [...new Set(enrichedData.map(r => r.expiration))].sort();
-        const strikes = [...new Set(enrichedData.map(r => r.strike))].sort((a, b) => a - b);
-
-        const heatmapData = [];
-
-        for (let i = 0; i < expirations.length; i++) {
-            for (let j = 0; j < strikes.length; j++) {
-                const match = enrichedData.find(r => r.expiration === expirations[i] && r.strike === strikes[j]);
-                const pctChange = match ? match['volume_pct_change' + suffix] : null;
-                const zVal = pctChange !== null ? Math.max(-100, Math.min(200, pctChange)) : null;
-                heatmapData.push([j, i, zVal]);
-            }
-        }
-
-        const option = {
-            ...Config.echartsBase,
-            title: { text: `Volume Change (vs ${MoversComponent.comparisonMode === 'hour' ? '1H' : 'EOD'})`, ...Config.echartsBase.title },
-            tooltip: {
-                ...Config.echartsBase.tooltip,
-                formatter: function(params) {
-                    if (params.data[2] === null) return '';
-                    const strike = strikes[params.data[0]];
-                    const exp = expirations[params.data[1]];
-                    const match = enrichedData.find(r => r.expiration === exp && r.strike === strike);
-                    const pctChange = match ? match['volume_pct_change' + suffix] : null;
-                    const volDelta = match ? match['volume_delta' + suffix] : 0;
-                    const pctStr = pctChange !== null ? `${pctChange > 0 ? '+' : ''}${pctChange.toFixed(1)}%` : '-';
-                    return `<b>${Utils.formatShortDate(exp)}</b><br/>Strike: ${strike}<br/>Δ: ${pctStr}<br/>Vol: ${volDelta > 0 ? '+' : ''}${volDelta.toLocaleString()}`;
-                }
-            },
-            xAxis: {
-                type: 'category',
-                data: strikes,
-                ...Config.xAxis,
-                name: 'Strike',
-                axisLabel: {
-                    ...Config.xAxis.axisLabel,
-                    interval: Math.ceil(strikes.length / 18)
-                }
-            },
-            yAxis: {
-                type: 'category',
-                data: expirations.map(Utils.formatShortDate),
-                ...Config.yAxis
-            },
-            visualMap: {
-                min: -100,
-                max: 200,
-                calculable: true,
-                orient: 'vertical',
-                right: 10,
-                top: 'center',
-                itemHeight: 120,
-                inRange: {
-                    color: Config.colorScales.change.map(c => c[1])
-                },
-                textStyle: {
-                    color: Config.theme.textMuted,
-                    fontSize: 10
-                },
-                formatter: function(value) {
-                    return value.toFixed(0) + '%';
-                }
-            },
-            series: [{
-                type: 'heatmap',
-                data: heatmapData.filter(d => d[2] !== null),
-                itemStyle: {
-                    borderColor: Config.theme.bgSecondary,
-                    borderWidth: 1
-                },
-                emphasis: {
-                    itemStyle: {
-                        borderColor: Config.theme.text,
-                        borderWidth: 2
-                    }
-                }
-            }]
-        };
-
-        chart.setOption(option);
+        chart.setOption(option, true);
     },
 
     /**
