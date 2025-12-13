@@ -335,10 +335,10 @@ const ChartsComponent = {
         const dteRange = dteMax - dteMin || 7;
 
         // Calculate bar size as a proportion of axis range
-        // barSize is in axis coordinate units, so divide range by number of unique values
-        // Apply minimum sizes to ensure visibility with sparse data
-        const strikeBarSize = Math.max(2, (strikeRange / strikes.length) * 0.7);
-        const dteBarSize = Math.max(0.3, (dteRange / expirations.length) * 0.7);
+        // Use small multiplier (0.15) to create narrow spike-like columns
+        // that don't overlap even with dense strike data
+        const strikeBarSize = Math.max(1, (strikeRange / strikes.length) * 0.15);
+        const dteBarSize = Math.max(0.15, (dteRange / expirations.length) * 0.2);
 
         const option = {
             backgroundColor: 'transparent',
@@ -464,8 +464,8 @@ const ChartsComponent = {
             series: [{
                 type: 'bar3D',
                 data: barData,
-                bevelSize: 0.3,
-                bevelSmoothness: 2,
+                bevelSize: 0.1,
+                bevelSmoothness: 1,
                 shading: 'realistic',
                 realisticMaterial: {
                     roughness: 0.5,
