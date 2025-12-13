@@ -296,42 +296,44 @@ const ChartsComponent = {
     },
 
     /**
-     * 3D Volume Surface
+     * 3D Volume Bar Chart
      */
     renderVolumeSurface3D(chart, strikes, expirations, volMap, dteMap, maxLogVol, spotPrice) {
-        // Build surface data: [[strike, dte, logVolume], ...]
-        const surfaceData = [];
+        // Build bar data: [[strike, dte, logVolume], ...]
+        const barData = [];
 
         for (const exp of expirations) {
             const dte = dteMap[exp];
             for (const strike of strikes) {
                 const volData = volMap[exp]?.[strike];
-                if (volData) {
-                    surfaceData.push([strike, dte, volData.logVol]);
+                if (volData && volData.vol > 0) {
+                    barData.push({
+                        value: [strike, dte, volData.logVol],
+                        vol: volData.vol,
+                        notional: volData.notional,
+                        exp: exp
+                    });
                 }
             }
         }
 
-        // Find ATM strike index for reference
-        const atmStrike = spotPrice ? strikes.reduce((prev, curr) =>
-            Math.abs(curr - spotPrice) < Math.abs(prev - spotPrice) ? curr : prev
-        ) : null;
+        // Calculate bar size based on data density
+        const strikeStep = strikes.length > 1 ? (strikes[1] - strikes[0]) * 0.7 : 25;
+        const dteStep = expirations.length > 1 ?
+            Math.max(1, (dteMap[expirations[1]] - dteMap[expirations[0]]) * 0.7) : 2;
 
         const option = {
             backgroundColor: 'transparent',
             tooltip: {
                 ...Config.echartsBase.tooltip,
                 formatter: (params) => {
-                    const [strike, dte, logVol] = params.data;
-                    const exp = expirations.find(e => dteMap[e] === dte) || '';
-                    const volData = volMap[exp]?.[strike];
-                    const vol = volData ? volData.vol : 0;
-                    const notional = volData ? volData.notional : 0;
-                    const atmLabel = (spotPrice && Math.abs(strike - spotPrice) < 5) ? ' (ATM)' : '';
-                    return `<b>Strike: ${strike}${atmLabel}</b><br/>` +
-                           `Exp: ${Utils.formatShortDate(exp)} (${dte}d)<br/>` +
-                           `Volume: ${vol.toLocaleString()}<br/>` +
-                           `Notional: $${notional.toLocaleString()}`;
+                    const d = params.data;
+                    const [strike, dte] = d.value;
+                    const atmLabel = (spotPrice && Math.abs(strike - spotPrice) < 10) ? ' (ATM)' : '';
+                    return `<b>Strike: ${strike.toLocaleString()}${atmLabel}</b><br/>` +
+                           `Exp: ${Utils.formatShortDate(d.exp)} (${dte}d)<br/>` +
+                           `Volume: ${d.vol.toLocaleString()}<br/>` +
+                           `Notional: $${d.notional.toLocaleString()}`;
                 }
             },
             visualMap: {
@@ -358,8 +360,8 @@ const ChartsComponent = {
             xAxis3D: {
                 type: 'value',
                 name: 'Strike',
-                min: Math.min(...strikes),
-                max: Math.max(...strikes),
+                min: Math.min(...strikes) - strikeStep,
+                max: Math.max(...strikes) + strikeStep,
                 axisLabel: {
                     color: Config.theme.textMuted,
                     fontSize: 10,
@@ -384,6 +386,7 @@ const ChartsComponent = {
             zAxis3D: {
                 type: 'value',
                 name: 'Volume',
+                min: 0,
                 axisLabel: {
                     color: Config.theme.textMuted,
                     fontSize: 10,
@@ -398,13 +401,13 @@ const ChartsComponent = {
                 nameTextStyle: { color: Config.theme.textSecondary, fontSize: 11 }
             },
             grid3D: {
-                boxWidth: 120,
-                boxHeight: 60,
+                boxWidth: 100,
+                boxHeight: 70,
                 boxDepth: 80,
                 viewControl: {
-                    alpha: 25,
-                    beta: 45,
-                    distance: 220,
+                    alpha: 20,
+                    beta: 40,
+                    distance: 200,
                     autoRotate: false,
                     animation: true,
                     damping: 0.8,
@@ -416,24 +419,24 @@ const ChartsComponent = {
                     main: {
                         intensity: 1.2,
                         shadow: true,
-                        shadowQuality: 'high',
-                        alpha: 35,
-                        beta: 40
+                        shadowQuality: 'medium',
+                        alpha: 40,
+                        beta: 50
                     },
                     ambient: {
-                        intensity: 0.4
+                        intensity: 0.5
                     }
                 },
                 postEffect: {
                     enable: true,
                     bloom: {
                         enable: true,
-                        intensity: 0.1
+                        intensity: 0.08
                     },
                     SSAO: {
                         enable: true,
-                        radius: 4,
-                        intensity: 1.2
+                        radius: 3,
+                        intensity: 1
                     }
                 },
                 temporalSuperSampling: {
@@ -441,26 +444,22 @@ const ChartsComponent = {
                 }
             },
             series: [{
-                type: 'surface',
-                wireframe: {
-                    show: true,
-                    lineStyle: {
-                        color: 'rgba(255, 255, 255, 0.08)',
-                        width: 0.5
-                    }
-                },
-                itemStyle: {
-                    opacity: 0.95
-                },
+                type: 'bar3D',
+                data: barData,
+                bevelSize: 0.3,
+                bevelSmoothness: 2,
                 shading: 'realistic',
                 realisticMaterial: {
-                    roughness: 0.55,
+                    roughness: 0.5,
                     metalness: 0.1
                 },
-                data: surfaceData,
+                barSize: [strikeStep, dteStep],
                 emphasis: {
                     itemStyle: {
-                        opacity: 1
+                        color: Config.theme.accent
+                    },
+                    label: {
+                        show: false
                     }
                 }
             }]
