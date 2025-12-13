@@ -1,0 +1,813 @@
+/* =============================================================================
+   SPX Options Monitor - Modern Dark Theme
+   Based on TRACE 3D proof of concept design language
+   ============================================================================= */
+
+:root {
+    /* Background Colors */
+    --bg-primary: #0b0e14;
+    --bg-secondary: #121820;
+    --bg-tertiary: #1a2332;
+    --bg-elevated: #232d3f;
+
+    /* Border Colors */
+    --border: #2a3544;
+    --border-bright: #3d4f66;
+
+    /* Text Colors */
+    --text: #e6edf5;
+    --text-secondary: #8b9eb3;
+    --text-muted: #5a6b7d;
+
+    /* Trading Colors */
+    --positive: #00d4aa;
+    --positive-dim: rgba(0, 212, 170, 0.15);
+    --positive-mid: rgba(0, 212, 170, 0.4);
+    --negative: #ff4757;
+    --negative-dim: rgba(255, 71, 87, 0.15);
+    --negative-mid: rgba(255, 71, 87, 0.4);
+    --neutral: #ffa502;
+    --neutral-dim: rgba(255, 165, 2, 0.15);
+
+    /* Accent Colors */
+    --accent: #3b82f6;
+    --accent-dim: rgba(59, 130, 246, 0.2);
+    --accent-purple: #a855f7;
+    --accent-purple-dim: rgba(168, 85, 247, 0.2);
+
+    /* Chart Colors */
+    --chart-blue: #3b82f6;
+    --chart-cyan: #06b6d4;
+    --chart-green: #10b981;
+    --chart-amber: #f59e0b;
+    --chart-red: #ef4444;
+    --chart-purple: #a855f7;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text);
+    overflow: hidden;
+    height: 100vh;
+}
+
+/* =============================================================================
+   App Layout
+   ============================================================================= */
+
+.app {
+    display: grid;
+    grid-template-rows: 56px 44px 1fr;
+    height: 100vh;
+    background: var(--bg-primary);
+}
+
+/* =============================================================================
+   Header
+   ============================================================================= */
+
+.header {
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 20px;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-right: 20px;
+    border-right: 1px solid var(--border);
+}
+
+.logo-mark {
+    background: linear-gradient(135deg, var(--negative) 0%, var(--accent) 100%);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 700;
+    font-size: 12px;
+    color: white;
+}
+
+.logo-text {
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: -0.5px;
+}
+
+.logo-text span {
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+
+.ticker {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+}
+
+.ticker-symbol {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.ticker-price {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.ticker-change {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: var(--bg-tertiary);
+    color: var(--text-muted);
+}
+
+.ticker-change.up {
+    background: var(--positive-dim);
+    color: var(--positive);
+}
+
+.ticker-change.down {
+    background: var(--negative-dim);
+    color: var(--negative);
+}
+
+.header-stats {
+    display: flex;
+    gap: 20px;
+    margin-left: auto;
+}
+
+.header-stat {
+    text-align: center;
+}
+
+.header-stat-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+}
+
+.header-stat-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.header-stat-value.negative {
+    color: var(--negative);
+}
+
+.header-stat-value.positive {
+    color: var(--positive);
+}
+
+.header-actions {
+    margin-left: 20px;
+}
+
+.header-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.header-btn:hover {
+    background: var(--bg-elevated);
+    border-color: var(--border-bright);
+    color: var(--text);
+}
+
+.header-time {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-left: 20px;
+    border-left: 1px solid var(--border);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+/* =============================================================================
+   Navigation Tabs
+   ============================================================================= */
+
+.nav-tabs {
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 4px;
+}
+
+.nav-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.nav-tab:hover {
+    color: var(--text-secondary);
+    background: var(--bg-tertiary);
+}
+
+.nav-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+.nav-tab svg {
+    opacity: 0.7;
+}
+
+.nav-tab.active svg {
+    opacity: 1;
+}
+
+.nav-spacer {
+    flex: 1;
+}
+
+.nav-filter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.filter-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.nav-filter select {
+    padding: 6px 12px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-size: 12px;
+    font-family: 'IBM Plex Mono', monospace;
+    cursor: pointer;
+}
+
+.nav-filter select:hover {
+    border-color: var(--border-bright);
+}
+
+.nav-filter select:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+/* =============================================================================
+   Main Content Layout
+   ============================================================================= */
+
+.main-content {
+    display: grid;
+    grid-template-columns: 240px 1fr 220px;
+    gap: 1px;
+    background: var(--border);
+    overflow: hidden;
+}
+
+/* =============================================================================
+   Sidebars
+   ============================================================================= */
+
+.sidebar-left,
+.sidebar-right {
+    background: var(--bg-secondary);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.panel-header {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.panel-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+}
+
+.panel-toggles {
+    display: flex;
+    gap: 4px;
+}
+
+.toggle-btn {
+    padding: 4px 10px;
+    font-size: 10px;
+    font-weight: 600;
+    font-family: inherit;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.toggle-btn:hover {
+    border-color: var(--border-bright);
+    color: var(--text-secondary);
+}
+
+.toggle-btn.active {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.sidebar-chart {
+    flex: 1;
+    min-height: 0;
+}
+
+.sidebar-stats {
+    padding: 12px 14px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sidebar-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sidebar-stat .stat-label {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.sidebar-stat .stat-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+/* =============================================================================
+   Movers Panel
+   ============================================================================= */
+
+.movers-sort {
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 4px;
+}
+
+.sort-btn {
+    flex: 1;
+    padding: 6px 8px;
+    font-size: 10px;
+    font-weight: 600;
+    font-family: inherit;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.sort-btn:hover {
+    border-color: var(--border-bright);
+    color: var(--text-secondary);
+}
+
+.sort-btn.active {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.movers-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.movers-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.movers-header {
+    display: grid;
+    grid-template-columns: 1fr 40px 70px 30px;
+    gap: 8px;
+    padding: 6px 8px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 4px;
+}
+
+.mover-row {
+    display: grid;
+    grid-template-columns: 1fr 40px 70px 30px;
+    gap: 8px;
+    padding: 8px;
+    background: var(--bg-tertiary);
+    border-radius: 4px;
+    transition: background 0.15s ease;
+}
+
+.mover-row:hover {
+    background: var(--bg-elevated);
+}
+
+.mover-row.has-flags {
+    border-left: 2px solid var(--negative);
+}
+
+.mover-strike {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.mover-dte {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.mover-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    text-align: right;
+}
+
+.mover-value.positive {
+    color: var(--positive);
+}
+
+.mover-value.negative {
+    color: var(--negative);
+}
+
+.mover-flags {
+    display: flex;
+    gap: 2px;
+    justify-content: flex-end;
+}
+
+.flag {
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 700;
+    border-radius: 3px;
+    background: var(--negative-dim);
+    color: var(--negative);
+}
+
+.flag.delta { background: var(--accent-dim); color: var(--accent); }
+.flag.multiplier { background: var(--neutral-dim); color: var(--neutral); }
+.flag.dormancy { background: var(--accent-purple-dim); color: var(--accent-purple); }
+
+/* =============================================================================
+   Content Center
+   ============================================================================= */
+
+.content-center {
+    background: var(--bg-primary);
+    overflow-y: auto;
+    padding: 16px;
+}
+
+.content-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+/* =============================================================================
+   Meta Bar
+   ============================================================================= */
+
+.meta-bar {
+    display: flex;
+    gap: 24px;
+    padding: 12px 16px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    margin-bottom: 16px;
+}
+
+.meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.meta-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+}
+
+.meta-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.meta-value.positive {
+    color: var(--positive);
+}
+
+.meta-value.warning {
+    color: var(--neutral);
+}
+
+/* =============================================================================
+   Chart Containers
+   ============================================================================= */
+
+.chart-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.chart-full {
+    margin-bottom: 16px;
+}
+
+.chart-container {
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    padding: 16px;
+    border: 1px solid var(--border);
+}
+
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.chart-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.chart-wrapper {
+    height: 300px;
+    position: relative;
+}
+
+/* =============================================================================
+   Tables
+   ============================================================================= */
+
+.table-container {
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+thead {
+    background: var(--bg-tertiary);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+th {
+    padding: 10px 12px;
+    text-align: left;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+}
+
+th.number {
+    text-align: right;
+}
+
+th.sortable {
+    cursor: pointer;
+    transition: color 0.15s ease;
+}
+
+th.sortable:hover {
+    color: var(--text-secondary);
+}
+
+th.sort-active {
+    color: var(--accent);
+}
+
+td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-secondary);
+}
+
+td.number {
+    text-align: right;
+    font-family: 'IBM Plex Mono', monospace;
+}
+
+td.positive {
+    color: var(--positive);
+}
+
+td.negative {
+    color: var(--negative);
+}
+
+td.moneyness {
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--text-muted);
+}
+
+tr:hover td {
+    background: var(--bg-tertiary);
+}
+
+.exp-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background: var(--bg-elevated);
+    border-radius: 4px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+}
+
+.alert-row td {
+    background: var(--negative-dim);
+}
+
+/* =============================================================================
+   Greeks Tab Specific
+   ============================================================================= */
+
+.greeks-chart-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.surface-mode-toggle {
+    display: flex;
+    gap: 4px;
+}
+
+/* =============================================================================
+   Loading Overlay
+   ============================================================================= */
+
+.loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--bg-primary);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    transition: opacity 0.5s ease;
+}
+
+.loading-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.loading-spinner {
+    width: 48px;
+    height: 48px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.loading-text {
+    margin-top: 16px;
+    font-size: 13px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* =============================================================================
+   Scrollbars
+   ============================================================================= */
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-bright);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+}
+
+/* =============================================================================
+   No Data States
+   ============================================================================= */
+
+.no-data {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: var(--text-muted);
+    font-size: 13px;
+}

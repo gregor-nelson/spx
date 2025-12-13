@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPX Options Monitor</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading SPX Monitor</div>
+    </div>
+
+    <div class="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <div class="logo-mark">SPX</div>
+                <div class="logo-text">Options <span>Monitor</span></div>
+            </div>
+
+            <div class="ticker">
+                <span class="ticker-symbol">SPX</span>
+                <span class="ticker-price" id="tickerPrice">--</span>
+                <span class="ticker-change" id="tickerChange">--</span>
+            </div>
+
+            <div class="header-stats">
+                <div class="header-stat">
+                    <div class="header-stat-label">Contracts</div>
+                    <div class="header-stat-value" id="statContracts">--</div>
+                </div>
+                <div class="header-stat">
+                    <div class="header-stat-label">Flagged</div>
+                    <div class="header-stat-value" id="statFlagged">--</div>
+                </div>
+                <div class="header-stat">
+                    <div class="header-stat-label">Polls</div>
+                    <div class="header-stat-value" id="statPolls">--</div>
+                </div>
+                <div class="header-stat">
+                    <div class="header-stat-label">Alerts</div>
+                    <div class="header-stat-value" id="statAlerts">--</div>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <button class="header-btn" onclick="loadAll()" title="Refresh Data">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M23 4v6h-6M1 20v-6h6"/>
+                        <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+                    </svg>
+                    <span>Refresh</span>
+                </button>
+            </div>
+
+            <div class="header-time">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 6v6l4 2"/>
+                </svg>
+                <span id="headerTime">--:--</span>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="nav-tabs">
+            <button class="nav-tab active" data-tab="charts" onclick="showTab('charts')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 20V10M12 20V4M6 20v-6"/>
+                </svg>
+                <span>Charts</span>
+            </button>
+            <button class="nav-tab" data-tab="greeks" onclick="showTab('greeks')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 3v18h18"/>
+                    <path d="M18 9l-5 5-4-4-5 5"/>
+                </svg>
+                <span>Greeks</span>
+            </button>
+            <button class="nav-tab" data-tab="latest" onclick="showTab('latest')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                </svg>
+                <span>Latest</span>
+            </button>
+            <button class="nav-tab" data-tab="intraday" onclick="showTab('intraday')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 6v6l4 2"/>
+                </svg>
+                <span>Intraday</span>
+            </button>
+            <button class="nav-tab" data-tab="history" onclick="showTab('history')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <span>History</span>
+            </button>
+            <button class="nav-tab" data-tab="alerts" onclick="showTab('alerts')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                <span>Alerts</span>
+            </button>
+
+            <div class="nav-spacer"></div>
+
+            <div class="nav-filter">
+                <label class="filter-label">Expiration</label>
+                <select id="expirationFilter" onchange="onExpirationChange()">
+                    <option value="">All</option>
+                </select>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Left Sidebar (Strike Plot / Filters) -->
+            <aside class="sidebar-left" id="sidebarLeft">
+                <div class="panel-header">
+                    <span class="panel-title">Strike Plot</span>
+                    <div class="panel-toggles">
+                        <button class="toggle-btn active" data-mode="volume" onclick="setStrikePlotMode('volume')">Vol</button>
+                        <button class="toggle-btn" data-mode="oi" onclick="setStrikePlotMode('oi')">OI</button>
+                        <button class="toggle-btn" data-mode="delta" onclick="setStrikePlotMode('delta')">Chg</button>
+                    </div>
+                </div>
+                <div id="strikePlotChart" class="sidebar-chart"></div>
+
+                <div class="sidebar-stats">
+                    <div class="sidebar-stat">
+                        <span class="stat-label">Expirations</span>
+                        <span class="stat-value" id="sidebarExpirations">--</span>
+                    </div>
+                    <div class="sidebar-stat">
+                        <span class="stat-label">DB Size</span>
+                        <span class="stat-value" id="sidebarDbSize">--</span>
+                    </div>
+                    <div class="sidebar-stat">
+                        <span class="stat-label">Last Update</span>
+                        <span class="stat-value" id="sidebarLastUpdate">--</span>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Center Content -->
+            <section class="content-center" id="contentCenter">
+                <div class="content-loading">Loading...</div>
+            </section>
+
+            <!-- Right Sidebar (Movers Panel) -->
+            <aside class="sidebar-right" id="sidebarRight">
+                <div class="panel-header">
+                    <span class="panel-title">Movers</span>
+                    <div class="panel-toggles">
+                        <button class="toggle-btn active" onclick="setComparisonMode('hour')">1H</button>
+                        <button class="toggle-btn" onclick="setComparisonMode('eod')">EOD</button>
+                    </div>
+                </div>
+                <div class="movers-sort">
+                    <button class="sort-btn active" data-sort="volume" onclick="setMoverSort('volume')">Vol</button>
+                    <button class="sort-btn" data-sort="oi" onclick="setMoverSort('oi')">OI</button>
+                    <button class="sort-btn" data-sort="delta" onclick="setMoverSort('delta')">Δ</button>
+                    <button class="sort-btn" data-sort="notional" onclick="setMoverSort('notional')">$</button>
+                </div>
+                <div id="moversList" class="movers-list">
+                    <div class="content-loading">--</div>
+                </div>
+            </aside>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/components/charts.js"></script>
+    <script src="js/components/greeks.js"></script>
+    <script src="js/components/tables.js"></script>
+    <script src="js/components/movers.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+[Unit]
+Description=SPX Options Monitor
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=debian
+Group=debian
+WorkingDirectory=/opt/spx/src
+Environment=PATH=/home/debian/.pyenv/shims:/usr/local/bin:/usr/bin:/bin
+EnvironmentFile=/opt/spx/.env
+ExecStart=/home/debian/.pyenv/shims/python server.py
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=spx
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/spx
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+[Install]
+WantedBy=multi-user.target
