@@ -10,7 +10,7 @@ Group=debian
 WorkingDirectory=/opt/spx/src
 Environment=PATH=/home/debian/.pyenv/shims:/usr/local/bin:/usr/bin:/bin
 EnvironmentFile=/opt/spx/.env
-ExecStart=/home/debian/.pyenv/shims/python server.py
+ExecStart=/home/debian/.pyenv/shims/python main.py
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=always
 RestartSec=10
