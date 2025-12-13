@@ -9,7 +9,7 @@ const Config = {
     // =========================================================================
     // Base path for API calls - change this when deploying behind a reverse proxy
     // Examples: '' for root, '/spx' for path-based routing
-    apiBase: '',
+    apiBase: '/spx',
 
     // =========================================================================
     // Theme Colors (matching CSS variables)
