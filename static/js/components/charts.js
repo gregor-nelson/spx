@@ -317,12 +317,15 @@ const ChartsComponent = {
             }
         }
 
-        // Filter to top volume points when data is too dense (> 500 bars)
-        // This ensures individual bars remain distinguishable
-        if (barData.length > 500) {
+        // Filter to top volume points when data is too dense (> 300 bars)
+        // This ensures individual bars remain distinguishable without overlap
+        const totalBars = barData.length;
+        const isFiltered = barData.length > 300;
+        if (isFiltered) {
             barData.sort((a, b) => b.vol - a.vol);
-            barData = barData.slice(0, 500);
+            barData = barData.slice(0, 300);
         }
+        const displayedBars = barData.length;
 
         // Calculate axis ranges
         const strikeMin = Math.min(...strikes);
@@ -335,13 +338,28 @@ const ChartsComponent = {
         const dteRange = dteMax - dteMin || 7;
 
         // Calculate bar size as a proportion of axis range
-        // Use small multiplier (0.15) to create narrow spike-like columns
-        // that don't overlap even with dense strike data
-        const strikeBarSize = Math.max(1, (strikeRange / strikes.length) * 0.15);
-        const dteBarSize = Math.max(0.15, (dteRange / expirations.length) * 0.2);
+        // Use small multiplier to create narrow spike-like columns
+        const strikeBarSize = Math.max(0.5, (strikeRange / strikes.length) * 0.1);
+        const dteBarSize = Math.max(0.1, (dteRange / expirations.length) * 0.15);
+
+        // Build status text
+        const statusText = isFiltered
+            ? `Showing top ${displayedBars} of ${totalBars} by volume · ${strikes.length} strikes · ${expirations.length} expirations`
+            : `${displayedBars} points · ${strikes.length} strikes · ${expirations.length} expirations`;
 
         const option = {
             backgroundColor: 'transparent',
+            graphic: [{
+                type: 'text',
+                left: 10,
+                top: 5,
+                style: {
+                    text: statusText,
+                    fill: Config.theme.textMuted,
+                    fontSize: 11,
+                    fontFamily: "'IBM Plex Sans', -apple-system, sans-serif"
+                }
+            }],
             tooltip: {
                 ...Config.echartsBase.tooltip,
                 formatter: (params) => {
@@ -464,8 +482,8 @@ const ChartsComponent = {
             series: [{
                 type: 'bar3D',
                 data: barData,
-                bevelSize: 0.1,
-                bevelSmoothness: 1,
+                bevelSize: 0,
+                bevelSmoothness: 0,
                 shading: 'realistic',
                 realisticMaterial: {
                     roughness: 0.5,
