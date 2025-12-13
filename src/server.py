@@ -494,10 +494,23 @@ def health_check():
 # MAIN
 # =============================================================================
 
-if __name__ == '__main__':
+def run_server():
+    """Run the server with appropriate backend."""
     print("Starting SPX Dashboard server...")
     print(f"Database: {DB_PATH}")
     print(f"Static files: {STATIC_DIR}")
     print(f"Debug mode: {DEBUG}")
     print(f"Listening on http://{HOST}:{PORT}")
-    app.run(host=HOST, port=PORT, debug=DEBUG)
+
+    if DEBUG:
+        # Development: Flask's built-in server with hot reload
+        app.run(host=HOST, port=PORT, debug=True)
+    else:
+        # Production: Waitress WSGI server
+        from waitress import serve
+        print("Using Waitress production server")
+        serve(app, host=HOST, port=PORT)
+
+
+if __name__ == '__main__':
+    run_server()

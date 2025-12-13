@@ -1,0 +1,13 @@
+# SPX Options Monitor - Dependencies
+
+# Web framework
+flask>=2.0
+
+# HTTP client for Polygon API
+requests>=2.28
+
+# Environment variable management
+python-dotenv>=1.0
+
+# Production WSGI server (pure Python, cross-platform)
+waitress>=2.1

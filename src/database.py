@@ -50,6 +50,7 @@ class SPXDatabase:
         self.conn.execute("PRAGMA synchronous=NORMAL")  # Faster writes
         self.conn.execute("PRAGMA cache_size=-64000")  # 64MB cache
         self.conn.execute("PRAGMA temp_store=MEMORY")  # Temp tables in RAM
+        self.conn.execute("PRAGMA busy_timeout=30000")  # 30s wait on locks
 
     def create_schema(self):
         """Create database schema with indexes."""
