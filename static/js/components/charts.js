@@ -300,7 +300,7 @@ const ChartsComponent = {
      */
     renderVolumeSurface3D(chart, strikes, expirations, volMap, dteMap, maxLogVol, spotPrice) {
         // Build bar data: [[strike, dte, logVolume], ...]
-        const barData = [];
+        let barData = [];
 
         for (const exp of expirations) {
             const dte = dteMap[exp];
@@ -317,10 +317,28 @@ const ChartsComponent = {
             }
         }
 
-        // Calculate bar size based on data density
-        const strikeStep = strikes.length > 1 ? (strikes[1] - strikes[0]) * 0.7 : 25;
-        const dteStep = expirations.length > 1 ?
-            Math.max(1, (dteMap[expirations[1]] - dteMap[expirations[0]]) * 0.7) : 2;
+        // Filter to top volume points when data is too dense (> 500 bars)
+        // This ensures individual bars remain distinguishable
+        if (barData.length > 500) {
+            barData.sort((a, b) => b.vol - a.vol);
+            barData = barData.slice(0, 500);
+        }
+
+        // Calculate axis ranges
+        const strikeMin = Math.min(...strikes);
+        const strikeMax = Math.max(...strikes);
+        const strikeRange = strikeMax - strikeMin || 100;
+
+        const dteValues = Object.values(dteMap);
+        const dteMin = Math.min(...dteValues);
+        const dteMax = Math.max(...dteValues);
+        const dteRange = dteMax - dteMin || 7;
+
+        // Calculate bar size as a proportion of axis range
+        // barSize is in axis coordinate units, so divide range by number of unique values
+        // Apply minimum sizes to ensure visibility with sparse data
+        const strikeBarSize = Math.max(2, (strikeRange / strikes.length) * 0.7);
+        const dteBarSize = Math.max(0.3, (dteRange / expirations.length) * 0.7);
 
         const option = {
             backgroundColor: 'transparent',
@@ -360,8 +378,8 @@ const ChartsComponent = {
             xAxis3D: {
                 type: 'value',
                 name: 'Strike',
-                min: Math.min(...strikes) - strikeStep,
-                max: Math.max(...strikes) + strikeStep,
+                min: strikeMin - strikeBarSize,
+                max: strikeMax + strikeBarSize,
                 axisLabel: {
                     color: Config.theme.textMuted,
                     fontSize: 10,
@@ -453,7 +471,7 @@ const ChartsComponent = {
                     roughness: 0.5,
                     metalness: 0.1
                 },
-                barSize: [strikeStep, dteStep],
+                barSize: [strikeBarSize, dteBarSize],
                 emphasis: {
                     itemStyle: {
                         color: Config.theme.accent
