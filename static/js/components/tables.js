@@ -4,6 +4,218 @@
 // =============================================================================
 
 const TablesComponent = {
+    // Sort state for each table type
+    sortState: {
+        snapshot: { column: null, direction: 'desc' },
+        daily: { column: null, direction: 'desc' },
+        alerts: { column: null, direction: 'desc' }
+    },
+
+    // Store current data for re-sorting
+    currentData: {
+        snapshot: [],
+        daily: [],
+        alerts: []
+    },
+
+    // Store options for re-rendering
+    currentOptions: {
+        snapshot: { showExpiration: false }
+    },
+
+    /**
+     * Column definitions for sorting
+     */
+    columns: {
+        snapshot: [
+            { key: 'captured_at', label: 'Time', type: 'time' },
+            { key: 'expiration', label: 'Exp', type: 'string', conditional: 'showExpiration' },
+            { key: 'strike', label: 'Strike', type: 'number' },
+            { key: 'moneyness', label: 'M%', type: 'number' },
+            { key: 'dte', label: 'DTE', type: 'number' },
+            { key: 'volume', label: 'Vol', type: 'volume', class: 'number' },
+            { key: 'volume_pct_change', label: 'Vol Chg', type: 'volChange', class: 'number' },
+            { key: 'open_interest', label: 'OI', type: 'number', class: 'number' },
+            { key: 'close_price', label: 'Price', type: 'number', class: 'number' },
+            { key: 'notional', label: 'Notional', type: 'notional', class: 'number' },
+            { key: 'delta', label: 'Delta', type: 'number', class: 'number' },
+            { key: 'implied_vol', label: 'IV', type: 'number', class: 'number' },
+            { key: 'flags', label: 'Flags', type: 'none' }
+        ],
+        daily: [
+            { key: 'trade_date', label: 'Date', type: 'date' },
+            { key: 'expiration', label: 'Exp', type: 'string' },
+            { key: 'strike', label: 'Strike', type: 'number' },
+            { key: 'moneyness', label: 'M%', type: 'number' },
+            { key: 'dte', label: 'DTE', type: 'number' },
+            { key: 'volume', label: 'Volume', type: 'number', class: 'number' },
+            { key: 'open_interest', label: 'OI', type: 'number', class: 'number' },
+            { key: 'close_price', label: 'Close', type: 'number', class: 'number' },
+            { key: 'delta', label: 'Delta', type: 'number', class: 'number' },
+            { key: 'implied_vol', label: 'IV', type: 'number', class: 'number' }
+        ],
+        alerts: [
+            { key: 'triggered_at', label: 'Time', type: 'datetime' },
+            { key: 'strike', label: 'Strike', type: 'number' },
+            { key: 'expiration', label: 'Exp', type: 'string' },
+            { key: 'volume_current', label: 'Volume', type: 'number', class: 'number' },
+            { key: 'premium_notional', label: 'Notional', type: 'number', class: 'number' },
+            { key: 'flags', label: 'Flags', type: 'none' }
+        ]
+    },
+
+    /**
+     * Get sort value for a row based on column type
+     */
+    getSortValue(row, column, suffix = '_hour') {
+        const key = column.key;
+        let value;
+
+        switch (column.type) {
+            case 'volChange':
+                // Sort by percentage change
+                value = row['volume_pct_change' + suffix];
+                if (value === null || value === undefined) {
+                    value = row.volume_pct_change;
+                }
+                return value || 0;
+
+            case 'volume':
+                return row.volume_today || row.volume_cumulative || 0;
+
+            case 'notional':
+                return (row.volume_today || row.volume_cumulative || 0) * (row.close_price || 0) * 100;
+
+            case 'time':
+                return row[key] ? new Date(row[key]).getTime() : 0;
+
+            case 'date':
+                return row[key] ? new Date(row[key]).getTime() : 0;
+
+            case 'datetime':
+                return row[key] ? new Date(row[key]).getTime() : 0;
+
+            case 'number':
+                value = row[key];
+                return (value === null || value === undefined) ? -Infinity : value;
+
+            case 'string':
+                return row[key] || '';
+
+            default:
+                return row[key] || 0;
+        }
+    },
+
+    /**
+     * Sort rows by column
+     */
+    sortRows(rows, tableType, suffix = '_hour') {
+        const state = this.sortState[tableType];
+        if (!state.column) return rows;
+
+        const column = this.columns[tableType].find(c => c.key === state.column);
+        if (!column || column.type === 'none') return rows;
+
+        const sorted = [...rows].sort((a, b) => {
+            const aVal = this.getSortValue(a, column, suffix);
+            const bVal = this.getSortValue(b, column, suffix);
+
+            let comparison = 0;
+            if (column.type === 'string') {
+                comparison = String(aVal).localeCompare(String(bVal));
+            } else {
+                comparison = aVal - bVal;
+            }
+
+            return state.direction === 'asc' ? comparison : -comparison;
+        });
+
+        return sorted;
+    },
+
+    /**
+     * Handle column header click for sorting
+     */
+    handleSort(tableType, columnKey) {
+        const state = this.sortState[tableType];
+
+        if (state.column === columnKey) {
+            // Toggle direction
+            state.direction = state.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            // New column, default to descending
+            state.column = columnKey;
+            state.direction = 'desc';
+        }
+
+        // Re-render the table
+        this.reRenderTable(tableType);
+    },
+
+    /**
+     * Re-render table after sort change
+     */
+    reRenderTable(tableType) {
+        const container = document.querySelector('.table-container');
+        if (!container) return;
+
+        let html;
+        switch (tableType) {
+            case 'snapshot':
+                html = this.renderSnapshot(this.currentData.snapshot, this.currentOptions.snapshot.showExpiration);
+                break;
+            case 'daily':
+                html = this.renderDaily(this.currentData.daily);
+                break;
+            case 'alerts':
+                html = this.renderAlerts(this.currentData.alerts);
+                break;
+        }
+
+        if (html) {
+            container.outerHTML = html;
+            this.attachSortHandlers(tableType);
+        }
+    },
+
+    /**
+     * Attach click handlers to sortable headers
+     */
+    attachSortHandlers(tableType) {
+        document.querySelectorAll(`th[data-sort]`).forEach(th => {
+            th.addEventListener('click', () => {
+                const columnKey = th.dataset.sort;
+                this.handleSort(tableType, columnKey);
+            });
+        });
+    },
+
+    /**
+     * Generate sortable header HTML
+     */
+    renderHeader(column, tableType, showExpiration = true) {
+        if (column.conditional === 'showExpiration' && !showExpiration) {
+            return '';
+        }
+
+        const state = this.sortState[tableType];
+        const isSorted = state.column === column.key;
+        const sortClass = isSorted ? ` sorted ${state.direction}` : '';
+        const sortable = column.type !== 'none' ? ' sortable' : '';
+        const dataSort = column.type !== 'none' ? ` data-sort="${column.key}"` : '';
+        const classAttr = column.class ? ` class="${column.class}${sortClass}${sortable}"` : (sortClass || sortable ? ` class="${sortClass}${sortable}".trim()` : '');
+
+        // Build class string properly
+        let classes = [];
+        if (column.class) classes.push(column.class);
+        if (sortClass.trim()) classes.push(sortClass.trim());
+        if (sortable.trim()) classes.push(sortable.trim());
+        const finalClass = classes.length ? ` class="${classes.join(' ')}"` : '';
+
+        return `<th${finalClass}${dataSort}>${column.label}${isSorted ? (state.direction === 'asc' ? ' ▲' : ' ▼') : ''}</th>`;
+    },
+
     /**
      * Renders snapshot table (used by Latest & Intraday tabs)
      * @param {Array} rows - Array of snapshot data
@@ -15,34 +227,34 @@ const TablesComponent = {
             return '<div class="content-loading">No data available</div>';
         }
 
+        // Store data and options for re-sorting
+        this.currentData.snapshot = rows;
+        this.currentOptions.snapshot.showExpiration = showExpiration;
+
         const suffix = (typeof MoversComponent !== 'undefined')
             ? (MoversComponent.comparisonMode === 'hour' ? '_hour' : '_eod')
             : '_hour';
 
+        // Apply sorting if active
+        const sortedRows = this.sortRows(rows, 'snapshot', suffix);
+
+        // Generate sortable headers
+        const headers = this.columns.snapshot
+            .map(col => this.renderHeader(col, 'snapshot', showExpiration))
+            .join('');
+
         let html = `
-            <div class="table-container">
+            <div class="table-container" data-table-type="snapshot">
                 <table>
                     <thead>
                         <tr>
-                            <th>Time</th>
-                            ${showExpiration ? '<th>Exp</th>' : ''}
-                            <th>Strike</th>
-                            <th>M%</th>
-                            <th>DTE</th>
-                            <th class="number">Vol</th>
-                            <th class="number">Vol Chg</th>
-                            <th class="number">OI</th>
-                            <th class="number">Price</th>
-                            <th class="number">Notional</th>
-                            <th class="number">Delta</th>
-                            <th class="number">IV</th>
-                            <th>Flags</th>
+                            ${headers}
                         </tr>
                     </thead>
                     <tbody>
         `;
 
-        for (const row of rows) {
+        for (const row of sortedRows) {
             const notional = (row.volume_today || row.volume_cumulative || 0) * (row.close_price || 0) * 100;
             const volDelta = row['volume_delta' + suffix] || row.volume_delta || 0;
             const volPct = row['volume_pct_change' + suffix];
@@ -96,27 +308,29 @@ const TablesComponent = {
             return '<div class="content-loading">No daily history available</div>';
         }
 
+        // Store data for re-sorting
+        this.currentData.daily = rows;
+
+        // Apply sorting if active
+        const sortedRows = this.sortRows(rows, 'daily');
+
+        // Generate sortable headers
+        const headers = this.columns.daily
+            .map(col => this.renderHeader(col, 'daily'))
+            .join('');
+
         let html = `
-            <div class="table-container">
+            <div class="table-container" data-table-type="daily">
                 <table>
                     <thead>
                         <tr>
-                            <th>Date</th>
-                            <th>Exp</th>
-                            <th>Strike</th>
-                            <th>M%</th>
-                            <th>DTE</th>
-                            <th class="number">Volume</th>
-                            <th class="number">OI</th>
-                            <th class="number">Close</th>
-                            <th class="number">Delta</th>
-                            <th class="number">IV</th>
+                            ${headers}
                         </tr>
                     </thead>
                     <tbody>
         `;
 
-        for (const row of rows) {
+        for (const row of sortedRows) {
             html += `
                 <tr>
                     <td>${row.trade_date || '-'}</td>
@@ -147,23 +361,29 @@ const TablesComponent = {
             return '<div class="content-loading">No alerts recorded</div>';
         }
 
+        // Store data for re-sorting
+        this.currentData.alerts = rows;
+
+        // Apply sorting if active
+        const sortedRows = this.sortRows(rows, 'alerts');
+
+        // Generate sortable headers
+        const headers = this.columns.alerts
+            .map(col => this.renderHeader(col, 'alerts'))
+            .join('');
+
         let html = `
-            <div class="table-container">
+            <div class="table-container" data-table-type="alerts">
                 <table>
                     <thead>
                         <tr>
-                            <th>Time</th>
-                            <th>Strike</th>
-                            <th>Exp</th>
-                            <th class="number">Volume</th>
-                            <th class="number">Notional</th>
-                            <th>Flags</th>
+                            ${headers}
                         </tr>
                     </thead>
                     <tbody>
         `;
 
-        for (const row of rows) {
+        for (const row of sortedRows) {
             // Parse flags from trigger_reasons
             let flagsHtml = '';
             try {

@@ -86,9 +86,6 @@ const ChartsComponent = {
                 </div>
                 <div id="oiByStrikeChart" class="chart-wrapper" style="height: 350px;"></div>
             </div>
-            <div class="chart-container chart-full">
-                <div id="volumeTimeChart" class="chart-wrapper" style="height: 280px;"></div>
-            </div>
         `;
     },
 
@@ -120,7 +117,6 @@ const ChartsComponent = {
         this.renderVolumeSurface();
         this.renderVolumeByStrike();
         this.renderOIByStrike();
-        this.renderVolumeTimeSeries();
     },
 
     /**
@@ -666,96 +662,6 @@ const ChartsComponent = {
         };
 
         chart.setOption(option, true);
-    },
-
-    /**
-     * Volume Time Series
-     */
-    renderVolumeTimeSeries() {
-        const chart = this.getChart('volumeTimeChart');
-        if (!chart) return;
-
-        const intradayData = (typeof data !== 'undefined') ? data.intraday || [] : [];
-        if (!intradayData.length) return;
-
-        const timeGroups = {};
-        for (const row of intradayData) {
-            const time = row.captured_at;
-            if (!timeGroups[time]) timeGroups[time] = 0;
-            timeGroups[time] += row.volume_cumulative || 0;
-        }
-
-        const times = Object.keys(timeGroups).sort();
-        const volumes = times.map(t => timeGroups[t]);
-
-        const option = {
-            ...Config.echartsBase,
-            title: { text: 'Total Volume Over Time', ...Config.echartsBase.title },
-            tooltip: {
-                ...Config.echartsBase.tooltip,
-                trigger: 'axis',
-                formatter: function(params) {
-                    return `<b>${params[0].axisValue}</b><br/>Volume: ${params[0].value.toLocaleString()}`;
-                }
-            },
-            xAxis: {
-                type: 'category',
-                data: times.map(t => t.substring(11, 16)),
-                ...Config.xAxis
-            },
-            yAxis: {
-                type: 'value',
-                ...Config.yAxis
-            },
-            dataZoom: [{
-                type: 'inside',
-                start: 0,
-                end: 100
-            }, {
-                type: 'slider',
-                start: 0,
-                end: 100,
-                height: 20,
-                bottom: 5,
-                borderColor: Config.theme.border,
-                fillerColor: Config.theme.accentDim,
-                handleStyle: {
-                    color: Config.theme.accent
-                },
-                textStyle: {
-                    color: Config.theme.textMuted,
-                    fontSize: 10
-                }
-            }],
-            series: [{
-                type: 'line',
-                data: volumes,
-                smooth: 0.3,
-                symbol: 'circle',
-                symbolSize: 6,
-                lineStyle: {
-                    color: Config.theme.negative,
-                    width: 2
-                },
-                itemStyle: {
-                    color: Config.theme.negative,
-                    borderColor: Config.theme.bgSecondary,
-                    borderWidth: 2
-                },
-                areaStyle: {
-                    color: {
-                        type: 'linear',
-                        x: 0, y: 0, x2: 0, y2: 1,
-                        colorStops: [
-                            { offset: 0, color: 'rgba(255, 71, 87, 0.2)' },
-                            { offset: 1, color: 'rgba(255, 71, 87, 0)' }
-                        ]
-                    }
-                }
-            }]
-        };
-
-        chart.setOption(option);
     },
 
     /**

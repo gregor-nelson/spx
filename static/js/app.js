@@ -239,15 +239,19 @@ function renderTab() {
             break;
         case 'latest':
             content.innerHTML = TablesComponent.renderSnapshot(data.enriched.data || data.latest, true);
+            TablesComponent.attachSortHandlers('snapshot');
             break;
         case 'intraday':
             content.innerHTML = TablesComponent.renderSnapshot(data.intraday, true);
+            TablesComponent.attachSortHandlers('snapshot');
             break;
         case 'history':
             content.innerHTML = TablesComponent.renderDaily(data.daily);
+            TablesComponent.attachSortHandlers('daily');
             break;
         case 'alerts':
             content.innerHTML = TablesComponent.renderAlerts(data.alerts);
+            TablesComponent.attachSortHandlers('alerts');
             break;
         default:
             content.innerHTML = '<div class="content-loading">Unknown tab</div>';

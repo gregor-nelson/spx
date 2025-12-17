@@ -669,10 +669,17 @@ th.number {
 th.sortable {
     cursor: pointer;
     transition: color 0.15s ease;
+    user-select: none;
 }
 
 th.sortable:hover {
     color: var(--text-secondary);
+    background: var(--hover);
+}
+
+th.sortable.sorted {
+    color: var(--accent);
+    background: rgba(59, 130, 246, 0.1);
 }
 
 th.sort-active {
