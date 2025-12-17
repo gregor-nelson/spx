@@ -9,6 +9,7 @@ const ChartsComponent = {
 
     // State
     volumeMode: '3d',  // '3d' or '2d'
+    oiMode: 'current',  // 'current', 'change', or 'pct'
 
     /**
      * Sets the volume surface display mode (3D or 2D)
@@ -21,6 +22,19 @@ const ChartsComponent = {
         });
 
         this.renderVolumeSurface();
+    },
+
+    /**
+     * Sets the OI chart display mode (Current, Change, or % Change)
+     */
+    setOIMode(mode) {
+        this.oiMode = mode;
+
+        document.querySelectorAll('.oi-mode-toggle .toggle-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.mode === mode);
+        });
+
+        this.renderOIByStrike();
     },
 
     /**
@@ -58,13 +72,19 @@ const ChartsComponent = {
                 </div>
                 <div id="volumeSurfaceChart" class="chart-wrapper" style="height: 380px;"></div>
             </div>
-            <div class="chart-grid">
-                <div class="chart-container">
-                    <div id="volumeByStrikeChart" class="chart-wrapper" style="height: 300px;"></div>
+            <div class="chart-container chart-full">
+                <div id="volumeByStrikeChart" class="chart-wrapper" style="height: 350px;"></div>
+            </div>
+            <div class="chart-container chart-full">
+                <div class="chart-header">
+                    <span class="chart-title">Open Interest by Strike</span>
+                    <div class="oi-mode-toggle panel-toggles">
+                        <button class="toggle-btn active" data-mode="current" onclick="ChartsComponent.setOIMode('current')" title="Current open interest">Current</button>
+                        <button class="toggle-btn" data-mode="change" onclick="ChartsComponent.setOIMode('change')" title="Change from yesterday">Change</button>
+                        <button class="toggle-btn" data-mode="pct" onclick="ChartsComponent.setOIMode('pct')" title="Percent change from yesterday">% Chg</button>
+                    </div>
                 </div>
-                <div class="chart-container">
-                    <div id="oiByStrikeChart" class="chart-wrapper" style="height: 300px;"></div>
-                </div>
+                <div id="oiByStrikeChart" class="chart-wrapper" style="height: 350px;"></div>
             </div>
             <div class="chart-container chart-full">
                 <div id="volumeTimeChart" class="chart-wrapper" style="height: 280px;"></div>
@@ -146,7 +166,6 @@ const ChartsComponent = {
                 type: 'category',
                 data: strikes,
                 ...Config.xAxis,
-                name: 'Strike',
                 axisLabel: {
                     ...Config.xAxis.axisLabel,
                     rotate: 45,
@@ -155,8 +174,7 @@ const ChartsComponent = {
             },
             yAxis: {
                 type: 'value',
-                ...Config.yAxis,
-                name: 'Volume'
+                ...Config.yAxis
             },
             series: [{
                 type: 'bar',
@@ -173,7 +191,7 @@ const ChartsComponent = {
     },
 
     /**
-     * OI by Strike Bar Chart
+     * OI by Strike Bar Chart (mode-aware: current, change, pct)
      */
     renderOIByStrike() {
         const chart = this.getChart('oiByStrikeChart');
@@ -186,56 +204,110 @@ const ChartsComponent = {
         if (!chartData.length) return;
 
         const spotPrice = data?.enriched?.meta?.spot_price;
-
         const strikes = chartData.map(r => r.strike);
-        const ois = chartData.map(r => r.open_interest || 0);
-        const colors = chartData.map(r => {
-            const oiPct = r.oi_pct_change;
-            if (oiPct === null || oiPct === undefined) return Config.theme.accentPurple;
-            if (oiPct > 5) return Config.theme.positive;
-            if (oiPct < -5) return Config.theme.negative;
-            return Config.theme.accentPurple;
-        });
+
+        // Chart title based on mode
+        const titles = {
+            'current': 'Open Interest by Strike',
+            'change': 'OI Change by Strike (vs Yesterday)',
+            'pct': 'OI % Change by Strike (vs Yesterday)'
+        };
+        const chartTitle = titles[this.oiMode];
+
+        // Values and colors based on mode
+        let values, colors;
+
+        if (this.oiMode === 'current') {
+            // Current: show absolute OI, color by pct change
+            values = chartData.map(r => r.open_interest || 0);
+            colors = chartData.map(r => {
+                const oiPct = r.oi_pct_change;
+                if (oiPct === null || oiPct === undefined) return Config.theme.accentPurple;
+                if (oiPct > 5) return Config.theme.positive;
+                if (oiPct < -5) return Config.theme.negative;
+                return Config.theme.accentPurple;
+            });
+        } else if (this.oiMode === 'change') {
+            // Change: show oi_delta, color by positive/negative
+            values = chartData.map(r => r.oi_delta ?? 0);
+            colors = chartData.map(r => {
+                const delta = r.oi_delta;
+                if (delta === null || delta === undefined) return Config.theme.textMuted;
+                if (delta > 0) return Config.theme.positive;
+                if (delta < 0) return Config.theme.negative;
+                return Config.theme.accentPurple;
+            });
+        } else {
+            // Pct: show oi_pct_change, color by positive/negative
+            values = chartData.map(r => r.oi_pct_change ?? 0);
+            colors = chartData.map(r => {
+                const pct = r.oi_pct_change;
+                if (pct === null || pct === undefined) return Config.theme.textMuted;
+                if (pct > 0) return Config.theme.positive;
+                if (pct < 0) return Config.theme.negative;
+                return Config.theme.accentPurple;
+            });
+        }
+
+        // Tooltip always shows full context
+        const oiMode = this.oiMode;
+        const tooltipFormatter = function(params) {
+            const d = chartData[params[0].dataIndex];
+            const oi = d.open_interest || 0;
+            const delta = d.oi_delta;
+            const pct = d.oi_pct_change;
+            const yest = d.oi_yesterday;
+
+            let html = `<b>Strike: ${d.strike}</b><br/>`;
+            html += `Current OI: ${oi.toLocaleString()}<br/>`;
+
+            if (yest !== null && yest !== undefined) {
+                html += `Yesterday OI: ${yest.toLocaleString()}<br/>`;
+            }
+            if (delta !== null && delta !== undefined) {
+                html += `Change: ${delta > 0 ? '+' : ''}${delta.toLocaleString()}`;
+                if (pct !== null && pct !== undefined) {
+                    html += ` (${pct > 0 ? '+' : ''}${pct.toFixed(1)}%)`;
+                }
+            }
+            return html;
+        };
+
+        // Y-axis config (add % formatter for pct mode)
+        const yAxisConfig = {
+            type: 'value',
+            ...Config.yAxis
+        };
+        if (this.oiMode === 'pct') {
+            yAxisConfig.axisLabel = {
+                ...Config.yAxis.axisLabel,
+                formatter: val => val.toFixed(1) + '%'
+            };
+        }
 
         const option = {
             ...Config.echartsBase,
-            title: { text: 'Open Interest by Strike', ...Config.echartsBase.title },
+            title: { text: chartTitle, ...Config.echartsBase.title },
             tooltip: {
                 ...Config.echartsBase.tooltip,
                 trigger: 'axis',
                 axisPointer: { type: 'shadow' },
-                formatter: function(params) {
-                    const d = chartData[params[0].dataIndex];
-                    const oi = d.open_interest || 0;
-                    const delta = d.oi_delta;
-                    const pct = d.oi_pct_change;
-                    let deltaStr = '';
-                    if (delta !== null && delta !== undefined) {
-                        deltaStr = `<br/>Δ: ${delta > 0 ? '+' : ''}${delta.toLocaleString()}`;
-                        if (pct !== null && pct !== undefined) deltaStr += ` (${pct > 0 ? '+' : ''}${pct.toFixed(1)}%)`;
-                    }
-                    return `<b>Strike: ${d.strike}</b><br/>OI: ${oi.toLocaleString()}${deltaStr}`;
-                }
+                formatter: tooltipFormatter
             },
             xAxis: {
                 type: 'category',
                 data: strikes,
                 ...Config.xAxis,
-                name: 'Strike',
                 axisLabel: {
                     ...Config.xAxis.axisLabel,
                     rotate: 45,
                     interval: Math.ceil(strikes.length / 15)
                 }
             },
-            yAxis: {
-                type: 'value',
-                ...Config.yAxis,
-                name: 'Open Interest'
-            },
+            yAxis: yAxisConfig,
             series: [{
                 type: 'bar',
-                data: ois.map((v, i) => ({
+                data: values.map((v, i) => ({
                     value: v,
                     itemStyle: { color: colors[i] }
                 })),
@@ -629,13 +701,11 @@ const ChartsComponent = {
             xAxis: {
                 type: 'category',
                 data: times.map(t => t.substring(11, 16)),
-                ...Config.xAxis,
-                name: 'Time (ET)'
+                ...Config.xAxis
             },
             yAxis: {
                 type: 'value',
-                ...Config.yAxis,
-                name: 'Cumulative Volume'
+                ...Config.yAxis
             },
             dataZoom: [{
                 type: 'inside',

@@ -49,21 +49,24 @@ app = Flask(__name__, static_folder=str(STATIC_DIR))
 # =============================================================================
 
 @app.route('/')
+@app.route('/spx/')
 def index():
     """Serve the main dashboard."""
-    return send_from_directory(STATIC_DIR, 'index.html')
+    return send_from_directory(str(STATIC_DIR), 'index.html')
 
 
 @app.route('/css/<path:filename>')
+@app.route('/spx/css/<path:filename>')
 def serve_css(filename):
     """Serve CSS files."""
-    return send_from_directory(STATIC_DIR / 'css', filename)
+    return send_from_directory(str(STATIC_DIR / 'css'), filename)
 
 
 @app.route('/js/<path:filename>')
+@app.route('/spx/js/<path:filename>')
 def serve_js(filename):
     """Serve JavaScript files."""
-    return send_from_directory(STATIC_DIR / 'js', filename)
+    return send_from_directory(str(STATIC_DIR / 'js'), filename)
 
 
 # =============================================================================
@@ -71,6 +74,7 @@ def serve_js(filename):
 # =============================================================================
 
 @app.route('/api/expirations')
+@app.route('/spx/api/expirations')
 def get_expirations():
     """Get list of available expirations in the database."""
     db = SPXDatabase(DB_PATH)
@@ -108,6 +112,7 @@ def get_expirations():
 
 
 @app.route('/api/intraday')
+@app.route('/spx/api/intraday')
 def get_intraday():
     """Get today's intraday snapshots. Optional expiration filter."""
     db = SPXDatabase(DB_PATH)
@@ -133,6 +138,7 @@ def get_intraday():
 
 
 @app.route('/api/intraday/latest')
+@app.route('/spx/api/intraday/latest')
 def get_latest_poll():
     """Get the most recent poll's data. Optional expiration filter."""
     db = SPXDatabase(DB_PATH)
@@ -170,6 +176,7 @@ def get_latest_poll():
 
 
 @app.route('/api/intraday/latest/enriched')
+@app.route('/spx/api/intraday/latest/enriched')
 def get_latest_enriched():
     """
     Get the most recent poll's data enriched with day-over-day comparisons.
@@ -411,6 +418,7 @@ def get_latest_enriched():
 
 
 @app.route('/api/daily')
+@app.route('/spx/api/daily')
 def get_daily():
     """Get daily history (last 7 days). Optional expiration filter."""
     db = SPXDatabase(DB_PATH)
@@ -436,6 +444,7 @@ def get_daily():
 
 
 @app.route('/api/alerts')
+@app.route('/spx/api/alerts')
 def get_alerts():
     """Get recent alerts."""
     db = SPXDatabase(DB_PATH)
@@ -445,6 +454,7 @@ def get_alerts():
 
 
 @app.route('/api/stats')
+@app.route('/spx/api/stats')
 def get_stats():
     """Get database statistics."""
     db = SPXDatabase(DB_PATH)
@@ -478,6 +488,7 @@ def get_stats():
 
 
 @app.route('/api/health')
+@app.route('/spx/api/health')
 def health_check():
     """Health check endpoint for monitoring."""
     try:
@@ -496,17 +507,24 @@ def health_check():
 
 def run_server():
     """Run the server with appropriate backend."""
+    is_windows = sys.platform == 'win32'
+    use_dev_mode = DEBUG or is_windows
+
     print("Starting SPX Dashboard server...")
     print(f"Database: {DB_PATH}")
     print(f"Static files: {STATIC_DIR}")
+    print(f"Platform: {sys.platform}")
     print(f"Debug mode: {DEBUG}")
+    print(f"Dev mode (Flask): {use_dev_mode}")
     print(f"Listening on http://{HOST}:{PORT}")
 
-    if DEBUG:
+    if use_dev_mode:
         # Development: Flask's built-in server with hot reload
-        app.run(host=HOST, port=PORT, debug=True)
+        # Also used on Windows where Waitress may not be available
+        print("Using Flask development server")
+        app.run(host=HOST, port=PORT, debug=DEBUG)
     else:
-        # Production: Waitress WSGI server
+        # Production: Waitress WSGI server (Linux/Mac)
         from waitress import serve
         print("Using Waitress production server")
         serve(app, host=HOST, port=PORT)

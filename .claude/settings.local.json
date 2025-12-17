@@ -3,7 +3,10 @@
     "allow": [
       "Bash(mkdir:*)",
       "Bash(python:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "WebSearch",
+      "WebFetch(domain:echarts.apache.org)",
+      "WebFetch(domain:github.com)"
     ],
     "deny": [],
     "ask": []
