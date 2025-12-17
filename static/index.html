@@ -125,18 +125,48 @@
 
         <!-- Main Content Area -->
         <main class="main-content">
-            <!-- Left Sidebar (Strike Plot / Filters) -->
+            <!-- Left Sidebar (Tabbed: Strike Plot / Movers) -->
             <aside class="sidebar-left" id="sidebarLeft">
-                <div class="panel-header">
-                    <span class="panel-title">Strike Plot</span>
-                    <div class="panel-toggles">
-                        <button class="toggle-btn active" data-mode="volume" onclick="setStrikePlotMode('volume')">Vol</button>
-                        <button class="toggle-btn" data-mode="oi" onclick="setStrikePlotMode('oi')">OI</button>
-                        <button class="toggle-btn" data-mode="delta" onclick="setStrikePlotMode('delta')">Chg</button>
+                <!-- Sidebar Tab Navigation -->
+                <div class="sidebar-tabs">
+                    <button class="sidebar-tab active" data-sidebar-tab="plot" onclick="showSidebarTab('plot')">Plot</button>
+                    <button class="sidebar-tab" data-sidebar-tab="movers" onclick="showSidebarTab('movers')">Movers</button>
+                </div>
+
+                <!-- Plot Tab Content -->
+                <div class="sidebar-tab-content active" id="sidebarTabPlot" data-tab-content="plot">
+                    <div class="panel-header">
+                        <span class="panel-title">Strike Plot</span>
+                        <div class="panel-toggles">
+                            <button class="toggle-btn active" data-mode="volume" onclick="setStrikePlotMode('volume')">Vol</button>
+                            <button class="toggle-btn" data-mode="oi" onclick="setStrikePlotMode('oi')">OI</button>
+                            <button class="toggle-btn" data-mode="delta" onclick="setStrikePlotMode('delta')">Chg</button>
+                        </div>
+                    </div>
+                    <div id="strikePlotChart" class="sidebar-chart"></div>
+                </div>
+
+                <!-- Movers Tab Content -->
+                <div class="sidebar-tab-content" id="sidebarTabMovers" data-tab-content="movers">
+                    <div class="panel-header">
+                        <span class="panel-title">Movers</span>
+                        <div class="panel-toggles">
+                            <button class="toggle-btn active" onclick="setComparisonMode('hour')">1H</button>
+                            <button class="toggle-btn" onclick="setComparisonMode('eod')">EOD</button>
+                        </div>
+                    </div>
+                    <div class="movers-sort">
+                        <button class="sort-btn active" data-sort="volume" onclick="setMoverSort('volume')">Vol</button>
+                        <button class="sort-btn" data-sort="oi" onclick="setMoverSort('oi')">OI</button>
+                        <button class="sort-btn" data-sort="delta" onclick="setMoverSort('delta')">Δ</button>
+                        <button class="sort-btn" data-sort="notional" onclick="setMoverSort('notional')">$</button>
+                    </div>
+                    <div id="moversList" class="movers-list">
+                        <div class="content-loading">--</div>
                     </div>
                 </div>
-                <div id="strikePlotChart" class="sidebar-chart"></div>
 
+                <!-- Shared Stats Footer -->
                 <div class="sidebar-stats">
                     <div class="sidebar-stat">
                         <span class="stat-label">Expirations</span>
@@ -157,26 +187,6 @@
             <section class="content-center" id="contentCenter">
                 <div class="content-loading">Loading...</div>
             </section>
-
-            <!-- Right Sidebar (Movers Panel) -->
-            <aside class="sidebar-right" id="sidebarRight">
-                <div class="panel-header">
-                    <span class="panel-title">Movers</span>
-                    <div class="panel-toggles">
-                        <button class="toggle-btn active" onclick="setComparisonMode('hour')">1H</button>
-                        <button class="toggle-btn" onclick="setComparisonMode('eod')">EOD</button>
-                    </div>
-                </div>
-                <div class="movers-sort">
-                    <button class="sort-btn active" data-sort="volume" onclick="setMoverSort('volume')">Vol</button>
-                    <button class="sort-btn" data-sort="oi" onclick="setMoverSort('oi')">OI</button>
-                    <button class="sort-btn" data-sort="delta" onclick="setMoverSort('delta')">Δ</button>
-                    <button class="sort-btn" data-sort="notional" onclick="setMoverSort('notional')">$</button>
-                </div>
-                <div id="moversList" class="movers-list">
-                    <div class="content-loading">--</div>
-                </div>
-            </aside>
         </main>
     </div>
 

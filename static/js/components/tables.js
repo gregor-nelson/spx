@@ -78,13 +78,13 @@ const TablesComponent = {
                 if (value === null || value === undefined) {
                     value = row.volume_pct_change;
                 }
-                return value || 0;
+                return value ?? 0;
 
             case 'volume':
-                return row.volume_today || row.volume_cumulative || 0;
+                return row.volume_today ?? row.volume_cumulative ?? 0;
 
             case 'notional':
-                return (row.volume_today || row.volume_cumulative || 0) * (row.close_price || 0) * 100;
+                return (row.volume_today ?? row.volume_cumulative ?? 0) * (row.close_price ?? 0) * 100;
 
             case 'time':
                 return row[key] ? new Date(row[key]).getTime() : 0;
@@ -103,7 +103,7 @@ const TablesComponent = {
                 return row[key] || '';
 
             default:
-                return row[key] || 0;
+                return row[key] ?? 0;
         }
     },
 
@@ -157,7 +157,7 @@ const TablesComponent = {
      * Re-render table after sort change
      */
     reRenderTable(tableType) {
-        const container = document.querySelector('.table-container');
+        const container = document.querySelector(`.table-container[data-table-type="${tableType}"]`);
         if (!container) return;
 
         let html;
@@ -204,7 +204,6 @@ const TablesComponent = {
         const sortClass = isSorted ? ` sorted ${state.direction}` : '';
         const sortable = column.type !== 'none' ? ' sortable' : '';
         const dataSort = column.type !== 'none' ? ` data-sort="${column.key}"` : '';
-        const classAttr = column.class ? ` class="${column.class}${sortClass}${sortable}"` : (sortClass || sortable ? ` class="${sortClass}${sortable}".trim()` : '');
 
         // Build class string properly
         let classes = [];

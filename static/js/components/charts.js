@@ -70,10 +70,10 @@ const ChartsComponent = {
                         <button class="toggle-btn" data-mode="2d" onclick="ChartsComponent.setVolumeMode('2d')" title="2D Heatmap View">2D</button>
                     </div>
                 </div>
-                <div id="volumeSurfaceChart" class="chart-wrapper" style="height: 380px;"></div>
+                <div id="volumeSurfaceChart" class="chart-wrapper"></div>
             </div>
             <div class="chart-container chart-full">
-                <div id="volumeByStrikeChart" class="chart-wrapper" style="height: 350px;"></div>
+                <div id="volumeByStrikeChart" class="chart-wrapper"></div>
             </div>
             <div class="chart-container chart-full">
                 <div class="chart-header">
@@ -84,7 +84,7 @@ const ChartsComponent = {
                         <button class="toggle-btn" data-mode="pct" onclick="ChartsComponent.setOIMode('pct')" title="Percent change from yesterday">% Chg</button>
                     </div>
                 </div>
-                <div id="oiByStrikeChart" class="chart-wrapper" style="height: 350px;"></div>
+                <div id="oiByStrikeChart" class="chart-wrapper"></div>
             </div>
         `;
     },

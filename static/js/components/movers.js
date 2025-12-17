@@ -1,6 +1,6 @@
 // =============================================================================
 // SPX Options Monitor - Movers Component
-// Renders the right-side movers panel
+// Renders the movers panel (sidebar tab)
 // =============================================================================
 
 const MoversComponent = {
@@ -16,7 +16,7 @@ const MoversComponent = {
         this.comparisonMode = mode;
 
         // Update toggle buttons in sidebar
-        document.querySelectorAll('.sidebar-right .panel-toggles .toggle-btn').forEach(btn => {
+        document.querySelectorAll('#sidebarTabMovers .panel-toggles .toggle-btn').forEach(btn => {
             btn.classList.toggle('active', btn.textContent.trim() === (mode === 'hour' ? '1H' : 'EOD'));
         });
 

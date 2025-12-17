@@ -5,6 +5,7 @@
 
 // Application State
 let currentTab = 'charts';
+let currentSidebarTab = 'plot';  // 'plot' or 'movers'
 let selectedExpiration = '';
 let strikePlotMode = 'volume';  // 'volume', 'oi', 'delta'
 let strikePlotChart = null;
@@ -259,6 +260,29 @@ function renderTab() {
 }
 
 // =============================================================================
+// Left Sidebar - Tab Navigation
+// =============================================================================
+
+function showSidebarTab(tab) {
+    currentSidebarTab = tab;
+
+    // Update tab button active states
+    document.querySelectorAll('.sidebar-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.sidebarTab === tab);
+    });
+
+    // Update content visibility
+    document.querySelectorAll('.sidebar-tab-content').forEach(content => {
+        content.classList.toggle('active', content.dataset.tabContent === tab);
+    });
+
+    // Resize chart when Plot tab becomes visible
+    if (tab === 'plot' && strikePlotChart) {
+        setTimeout(() => strikePlotChart.resize(), 0);
+    }
+}
+
+// =============================================================================
 // Left Sidebar - Strike Plot
 // =============================================================================
 
@@ -266,7 +290,7 @@ function setStrikePlotMode(mode) {
     strikePlotMode = mode;
 
     // Update toggle buttons
-    document.querySelectorAll('.sidebar-left .panel-toggles .toggle-btn').forEach(btn => {
+    document.querySelectorAll('#sidebarTabPlot .panel-toggles .toggle-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.mode === mode);
     });
 
@@ -404,8 +428,10 @@ function renderStrikePlot() {
 // =============================================================================
 
 function handleResize() {
-    // Resize all active charts
-    if (strikePlotChart) strikePlotChart.resize();
+    // Resize strike plot only when visible
+    if (currentSidebarTab === 'plot' && strikePlotChart) {
+        strikePlotChart.resize();
+    }
 
     if (currentTab === 'charts' && typeof ChartsComponent !== 'undefined') {
         ChartsComponent.resize();

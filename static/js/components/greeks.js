@@ -75,9 +75,6 @@ const GreeksComponent = {
             </div>
 
             <div class="chart-container chart-full">
-                <div id="ivSmileChart" class="chart-wrapper" style="height: 350px;"></div>
-            </div>
-            <div class="chart-container chart-full">
                 <div class="chart-header">
                     <span class="chart-title">Volatility Surface</span>
                     <div class="surface-mode-toggle panel-toggles">
@@ -85,19 +82,24 @@ const GreeksComponent = {
                         <button class="toggle-btn" data-mode="zscore" onclick="setVolSurfaceMode('zscore')" title="Z-score (standard deviations)">Z-Score</button>
                     </div>
                 </div>
-                <div id="volSurfaceChart" class="chart-wrapper" style="height: 350px;"></div>
+                <div id="volSurfaceChart" class="chart-wrapper"></div>
             </div>
-            <div class="chart-container chart-full">
-                <div id="deltaByStrikeChart" class="chart-wrapper" style="height: 350px;"></div>
-            </div>
-            <div class="chart-container chart-full">
-                <div id="thetaByStrikeChart" class="chart-wrapper" style="height: 350px;"></div>
-            </div>
-            <div class="chart-container chart-full">
-                <div id="vegaByStrikeChart" class="chart-wrapper" style="height: 350px;"></div>
-            </div>
-            <div class="chart-container chart-full">
-                <div id="gammaByStrikeChart" class="chart-wrapper" style="height: 350px;"></div>
+            <div class="chart-grid">
+                <div class="chart-container">
+                    <div id="ivSmileChart" class="chart-wrapper"></div>
+                </div>
+                <div class="chart-container">
+                    <div id="deltaByStrikeChart" class="chart-wrapper"></div>
+                </div>
+                <div class="chart-container">
+                    <div id="thetaByStrikeChart" class="chart-wrapper"></div>
+                </div>
+                <div class="chart-container">
+                    <div id="vegaByStrikeChart" class="chart-wrapper"></div>
+                </div>
+                <div class="chart-container">
+                    <div id="gammaByStrikeChart" class="chart-wrapper"></div>
+                </div>
             </div>
 
             ${this.renderTable(enrichedData)}
